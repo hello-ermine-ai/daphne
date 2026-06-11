@@ -214,7 +214,7 @@ Use the tools to implement this task. Call write_file for each file you need to 
   // Branch, commit, push, PR, merge
   execSync(`git config user.email "agent@daphne.app"`, { cwd: ROOT });
   execSync(`git config user.name "Daphne Agent"`, { cwd: ROOT });
-  execSync("git pull --rebase", { cwd: ROOT, stdio: "inherit" });
+  execSync("git pull --rebase --autostash", { cwd: ROOT, stdio: "inherit" });
 
   const branch = `agent/${ISSUE_NUMBER}-${slugify(commitMsg)}`;
   execSync(`git checkout -b ${branch}`, { cwd: ROOT });

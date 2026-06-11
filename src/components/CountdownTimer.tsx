@@ -13,6 +13,11 @@ export function CountdownTimer({ seconds, onTimeUp, onDismiss }: CountdownTimerP
   const calledTimeUp = useRef(false);
 
   useEffect(() => {
+    calledTimeUp.current = false;
+    setTimeLeft(seconds);
+  }, [seconds]);
+
+  useEffect(() => {
     if (timeLeft <= 0) {
       if (!calledTimeUp.current) {
         calledTimeUp.current = true;
@@ -27,44 +32,33 @@ export function CountdownTimer({ seconds, onTimeUp, onDismiss }: CountdownTimerP
   const minutes = Math.floor(timeLeft / 60);
   const secs = timeLeft % 60;
   const pct = timeLeft / seconds;
+  const isUrgent = pct <= 0.25 && timeLeft > 0;
 
-  const color =
-    pct > 0.5 ? "text-green-500" :
-    pct > 0.25 ? "text-yellow-500" :
-    "text-red-500";
+  const bg = pct > 0.5 ? "bg-green-100 border-green-300" :
+             pct > 0.25 ? "bg-yellow-100 border-yellow-300" :
+             "bg-red-100 border-red-300 animate-pulse";
 
-  const ringColor =
-    pct > 0.5 ? "stroke-green-400" :
-    pct > 0.25 ? "stroke-yellow-400" :
-    "stroke-red-400";
-
-  const circumference = 2 * Math.PI * 20;
-  const dashOffset = circumference * (1 - pct);
+  const textColor = pct > 0.5 ? "text-green-700" :
+                    pct > 0.25 ? "text-yellow-700" :
+                    "text-red-700";
 
   return (
-    <div className="flex items-center gap-2 bg-white rounded-2xl border-4 border-gray-200 px-3 py-2">
-      {/* Ring */}
-      <div className="relative w-12 h-12 flex items-center justify-center">
-        <svg className="absolute top-0 left-0 w-full h-full -rotate-90" viewBox="0 0 48 48">
-          <circle cx="24" cy="24" r="20" fill="none" stroke="#e5e7eb" strokeWidth="4" />
-          <circle
-            cx="24" cy="24" r="20" fill="none"
-            className={ringColor}
-            strokeWidth="4"
-            strokeDasharray={circumference}
-            strokeDashoffset={dashOffset}
-            strokeLinecap="round"
-            style={{ transition: "stroke-dashoffset 0.5s ease" }}
-          />
-        </svg>
-        <span className={`text-xs font-bold ${color}`}>
-          {minutes}:{secs.toString().padStart(2, "0")}
-        </span>
+    <div className={`flex items-center justify-between w-full border-4 rounded-3xl px-6 py-4 ${bg}`}>
+      <div className="flex items-center gap-3">
+        <span className="text-4xl">{isUrgent ? "⚡" : "⏱️"}</span>
+        <div>
+          <p className="text-sm text-gray-500 font-medium">Time left</p>
+          <p className={`text-4xl font-bold tabular-nums ${textColor}`}>
+            {minutes}:{secs.toString().padStart(2, "0")}
+          </p>
+        </div>
       </div>
-      <span className="text-sm text-gray-500 font-medium">⏱️ Timer</span>
+      {isUrgent && (
+        <span className={`text-lg font-bold ${textColor}`}>Hurry!</span>
+      )}
       <button
         onClick={onDismiss}
-        className="ml-1 text-gray-300 hover:text-gray-500 text-lg leading-none"
+        className="text-gray-300 hover:text-gray-500 text-2xl leading-none"
         title="Remove timer"
       >
         ✕

@@ -157,10 +157,15 @@ Is she correct? Reply with JSON: {"correct": true/false, "feedback": "short enco
     setSessionStars(0);
     setSessionCorrect(0);
     setSessionTotal(0);
+    setQuestion(null);
+    setFeedback("");
+    setUserAnswer("");
+    if (subject) getQuestion(subject, difficulty);
   }
 
   function handleTimerSkip() {
     setTimerState("off");
+    if (subject) getQuestion(subject, difficulty);
   }
 
   const handleTimeUp = useCallback(() => {

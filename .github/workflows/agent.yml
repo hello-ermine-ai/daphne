@@ -44,7 +44,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `✅ Done! Changes are live at https://daphne.helloermine.ai\n\n_Commit: ${{ steps.agent.outputs.commit_message }}_`
+              body: `✅ Done! PR merged and deploying to https://daphne.helloermine.ai\n\n_PR: ${{ steps.agent.outputs.pr_url }}_`
             })
 
       - name: Comment on failure

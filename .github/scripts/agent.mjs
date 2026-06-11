@@ -12,7 +12,6 @@ const ISSUE_NUMBER = process.env.ISSUE_NUMBER;
 
 if (!TASK) { console.error("TASK env var required"); process.exit(1); }
 
-// Files to include as context (skip generated/deps)
 const CONTEXT_PATHS = [
   "src/app",
   "src/components",
@@ -48,6 +47,10 @@ function formatContext(files) {
     .join("\n\n");
 }
 
+function slugify(str) {
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40).replace(/-$/, "");
+}
+
 async function run() {
   console.log(`\n🤖 Agent starting task: ${TASK}\n`);
 
@@ -65,6 +68,8 @@ Stack: Next.js 16 (App Router), TypeScript, Tailwind CSS, Supabase, Anthropic SD
 When given a task, respond ONLY with a JSON object in this exact format:
 {
   "commit_message": "short description of change",
+  "pr_title": "short PR title",
+  "pr_body": "brief description of what changed and why",
   "changes": [
     { "path": "relative/path/to/file.tsx", "content": "full file content" }
   ]
@@ -76,7 +81,7 @@ Rules:
 - Keep the UI fun and kid-friendly
 - Make sure TypeScript compiles
 - Do not add new dependencies unless absolutely necessary
-- If the task is already fully implemented, return: {"commit_message": "already done", "changes": []}`,
+- If the task is already fully implemented, return: {"commit_message": "already done", "pr_title": "", "pr_body": "", "changes": []}`,
 
     messages: [{
       role: "user",
@@ -88,17 +93,15 @@ Rules:
 
   let result;
   try {
-    // Prefer JSON inside ```json ... ``` block, fall back to bare { ... }
     const codeBlock = raw.match(/```json\s*([\s\S]*?)\s*```/);
     const jsonText = codeBlock ? codeBlock[1] : raw.match(/\{[\s\S]*\}/)?.[0];
     if (!jsonText) throw new Error("No JSON found in response");
     result = JSON.parse(jsonText);
-  } catch (e) {
+  } catch {
     console.error("Failed to parse Claude response:", raw.slice(0, 500));
     process.exit(1);
   }
 
-  // If agent says task is already done
   if (!result.changes || result.changes.length === 0) {
     console.log("✅ Agent says task is already complete — no changes needed.");
     process.exit(0);
@@ -125,17 +128,31 @@ Rules:
     process.exit(1);
   }
 
-  // Commit and push
+  // Create branch, commit, push, open PR, auto-merge
   execSync(`git config user.email "agent@daphne.app"`, { cwd: ROOT });
   execSync(`git config user.name "Daphne Agent"`, { cwd: ROOT });
   execSync("git pull --rebase", { cwd: ROOT, stdio: "inherit" });
+
+  const branch = `agent/${ISSUE_NUMBER}-${slugify(result.commit_message)}`;
+  execSync(`git checkout -b ${branch}`, { cwd: ROOT });
   execSync("git add -A", { cwd: ROOT });
   execSync(`git commit -m "${result.commit_message.replace(/"/g, "'")}"`, { cwd: ROOT });
-  execSync("git push", { cwd: ROOT });
+  execSync(`git push origin ${branch}`, { cwd: ROOT });
 
-  console.log("\n✅ Done! Pushed to main — Vercel is deploying.");
+  console.log(`\n🔀 Creating PR on branch ${branch}...`);
+  const prUrl = execSync(
+    `gh pr create --title "${(result.pr_title || result.commit_message).replace(/"/g, "'")}" --body "${(result.pr_body || "").replace(/"/g, "'")}\n\nCloses #${ISSUE_NUMBER}" --base main --head ${branch}`,
+    { cwd: ROOT, encoding: "utf8" }
+  ).trim();
+
+  console.log(`📎 PR: ${prUrl}`);
+  console.log("🔀 Merging PR...");
+  execSync(`gh pr merge ${prUrl} --merge --delete-branch`, { cwd: ROOT, stdio: "inherit" });
+
+  console.log("\n✅ Done! PR merged — Vercel is deploying.");
+
   const fs = await import("fs");
-  fs.appendFileSync(process.env.GITHUB_OUTPUT || "/dev/null", `commit_message=${result.commit_message}\n`);
+  fs.appendFileSync(process.env.GITHUB_OUTPUT || "/dev/null", `pr_url=${prUrl}\n`);
 }
 
 run().catch(e => { console.error(e); process.exit(1); });

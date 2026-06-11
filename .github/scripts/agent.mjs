@@ -124,7 +124,8 @@ Rules:
   execSync("git push", { cwd: ROOT });
 
   console.log("\n✅ Done! Pushed to main — Vercel is deploying.");
-  process.stdout.write(`::set-output name=commit_message::${result.commit_message}\n`);
+  const fs = await import("fs");
+  fs.appendFileSync(process.env.GITHUB_OUTPUT || "/dev/null", `commit_message=${result.commit_message}\n`);
 }
 
 run().catch(e => { console.error(e); process.exit(1); });

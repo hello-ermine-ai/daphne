@@ -220,7 +220,7 @@ Use the tools to implement this task. Call write_file for each file you need to 
   execSync(`git checkout -b ${branch}`, { cwd: ROOT });
   execSync("git add -A", { cwd: ROOT });
   execSync(`git commit -m "${commitMsg.replace(/"/g, "'")}"`, { cwd: ROOT });
-  execSync(`git push origin ${branch}`, { cwd: ROOT });
+  execSync(`git push --force origin ${branch}`, { cwd: ROOT });
 
   console.log(`\n🔀 Creating PR...`);
   const safeTitle = prTitle.replace(/"/g, "'");

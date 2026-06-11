@@ -119,6 +119,7 @@ Rules:
   // Commit and push
   execSync(`git config user.email "agent@daphne.app"`, { cwd: ROOT });
   execSync(`git config user.name "Daphne Agent"`, { cwd: ROOT });
+  execSync("git pull --rebase", { cwd: ROOT, stdio: "inherit" });
   execSync("git add -A", { cwd: ROOT });
   execSync(`git commit -m "${result.commit_message.replace(/"/g, "'")}"`, { cwd: ROOT });
   execSync("git push", { cwd: ROOT });

@@ -224,11 +224,13 @@ Use the tools to implement this task. Call write_file for each file you need to 
 
   console.log(`\n🔀 Creating PR...`);
   const safeTitle = prTitle.replace(/"/g, "'");
-  const safeBody = `${prBody.replace(/"/g, "'")}\n\nCloses #${ISSUE_NUMBER}`;
+  const bodyFile = join(ROOT, ".pr-body.tmp");
+  writeFileSync(bodyFile, `${prBody}\n\nCloses #${ISSUE_NUMBER}`);
   const prUrl = execSync(
-    `gh pr create --title "${safeTitle}" --body "${safeBody}" --base main --head ${branch}`,
+    `gh pr create --title "${safeTitle}" --body-file "${bodyFile}" --base main --head ${branch}`,
     { cwd: ROOT, encoding: "utf8" }
   ).trim();
+  unlinkSync(bodyFile);
 
   console.log(`📎 PR: ${prUrl}`);
   console.log("🔀 Merging PR...");

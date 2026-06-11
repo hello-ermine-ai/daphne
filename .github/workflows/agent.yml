@@ -1,0 +1,60 @@
+name: Dev Agent
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  agent:
+    # Run when issue has "agent" label OR body starts with "agent:"
+    if: |
+      contains(github.event.issue.labels.*.name, 'agent') ||
+      startsWith(github.event.issue.body, 'agent:')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run agent
+        id: agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TASK: ${{ github.event.issue.title }} — ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: node .github/scripts/agent.mjs
+
+      - name: Comment on issue
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `✅ Done! Changes are live at https://daphne.helloermine.ai\n\n_Commit: ${{ steps.agent.outputs.commit_message }}_`
+            })
+
+      - name: Comment on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `❌ Agent failed — build check didn't pass. No changes were deployed. Check the [action logs](https://github.com/${{ github.repository }}/actions) for details.`
+            })

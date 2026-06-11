@@ -57,7 +57,7 @@ async function run() {
   const client = new Anthropic();
   const response = await client.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 8096,
+    max_tokens: 16000,
     system: `You are an expert Next.js developer working on "Daphne's Learning App" — a kid-friendly educational site for an elementary school student.
 
 Stack: Next.js 16 (App Router), TypeScript, Tailwind CSS, Supabase, Anthropic SDK.
@@ -75,7 +75,8 @@ Rules:
 - Only include files that need to change
 - Keep the UI fun and kid-friendly
 - Make sure TypeScript compiles
-- Do not add new dependencies unless absolutely necessary`,
+- Do not add new dependencies unless absolutely necessary
+- If the task is already fully implemented, return: {"commit_message": "already done", "changes": []}`,
 
     messages: [{
       role: "user",
@@ -87,12 +88,20 @@ Rules:
 
   let result;
   try {
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("No JSON found in response");
-    result = JSON.parse(jsonMatch[0]);
+    // Prefer JSON inside ```json ... ``` block, fall back to bare { ... }
+    const codeBlock = raw.match(/```json\s*([\s\S]*?)\s*```/);
+    const jsonText = codeBlock ? codeBlock[1] : raw.match(/\{[\s\S]*\}/)?.[0];
+    if (!jsonText) throw new Error("No JSON found in response");
+    result = JSON.parse(jsonText);
   } catch (e) {
-    console.error("Failed to parse Claude response:", raw);
+    console.error("Failed to parse Claude response:", raw.slice(0, 500));
     process.exit(1);
+  }
+
+  // If agent says task is already done
+  if (!result.changes || result.changes.length === 0) {
+    console.log("✅ Agent says task is already complete — no changes needed.");
+    process.exit(0);
   }
 
   console.log(`📝 Commit: ${result.commit_message}`);
